@@ -1,0 +1,3 @@
+package trojan
+
+var ()
