@@ -51,28 +51,13 @@ func (c Credential) ForAdmin() (credential string) {
 	return credential
 }
 
-// internal struct supporting MySQL/MariaDB-based management
-type serverconf struct {
-	// Mandatory
-	mysqlHost     string // For IPv6, use the format of [::]
-	mysqlPort     uint16
-	mysqlDatabase string
-	mysqlUser     string
-	mysqlPasswd   string
-
-	// Optional
-	mysqlCAPath   string
-	mysqlKeyPath  string
-	mysqlCertPath string
-}
-
 // server.Server struct
 type Server struct {
 }
 
 func (s Server) AddAccount(sconf UlyssesServer.ServerConfigurables, aconf []UlyssesServer.AccountConfigurables) (accid []int, err error) {
 	accid = make([]int, 0)
-	servconf, err := loadServerConf(sconf)
+	servconf, err := parseServerConf(sconf)
 	if err != nil {
 		return accid, err
 	}

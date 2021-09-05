@@ -6,7 +6,22 @@ import (
 	UlyssesServer "github.com/TunnelWork/Ulysses/src/server"
 )
 
-func loadServerConf(sconf UlyssesServer.ServerConfigurables) (serverconf, error) {
+// internal struct supporting MySQL/MariaDB-based management
+type serverconf struct {
+	// Mandatory
+	mysqlHost     string // For IPv6, use the format of [::]
+	mysqlPort     uint16
+	mysqlDatabase string
+	mysqlUser     string
+	mysqlPasswd   string
+
+	// Optional
+	mysqlCAPath   string
+	mysqlKeyPath  string
+	mysqlCertPath string
+}
+
+func parseServerConf(sconf UlyssesServer.ServerConfigurables) (serverconf, error) {
 	servconf := serverconf{}
 
 	mysqlHost, ok := sconf["mysqlHost"]

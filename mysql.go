@@ -71,3 +71,5 @@ func conn(sconf serverconf) (*sql.DB, error) {
 
 	return db, nil
 }
+
+func insert(tbl string) {}
