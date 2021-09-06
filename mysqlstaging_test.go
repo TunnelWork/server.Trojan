@@ -1,17 +1,10 @@
 // +build mysqlstaging
+
 package trojan
 
 import "testing"
 
 // mysqlstaging credentials
-
-var mysqlStagingConf = serverconf{
-	mysqlHost:     "127.0.0.1",
-	mysqlPort:     3306,
-	mysqlDatabase: "tmp_staging",
-	mysqlUser:     "staging",
-	mysqlPasswd:   "staging",
-}
 
 func TestConnWithNoCert(t *testing.T) {
 	var mysqlConf = serverconf{
@@ -29,7 +22,7 @@ func TestConnWithNoCert(t *testing.T) {
 
 func TestConnWithCert(t *testing.T) {
 	var mysqlConf = serverconf{
-		mysqlHost:     "127.0.0.1",
+		mysqlHost:     "mysql-cert-staging.local",
 		mysqlPort:     3443,
 		mysqlDatabase: "tmp_staging",
 		mysqlUser:     "staging",
