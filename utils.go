@@ -7,7 +7,7 @@ import (
 )
 
 // internal struct supporting MySQL/MariaDB-based management
-type serverconf struct {
+type mysqlConf struct {
 	// Mandatory
 	mysqlHost     string // For IPv6, use the format of [::]
 	mysqlPort     uint16
@@ -21,8 +21,8 @@ type serverconf struct {
 	mysqlCertPath string
 }
 
-func parseServerConf(sconf UlyssesServer.ServerConfigurables) (serverconf, error) {
-	servconf := serverconf{}
+func parseServerConf(sconf UlyssesServer.ServerConfigurables) (mysqlConf, error) {
+	servconf := mysqlConf{}
 
 	mysqlHost, ok := sconf["mysqlHost"]
 	if !ok {

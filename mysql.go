@@ -13,10 +13,24 @@ import (
 )
 
 const (
-	mysqlAutoCommit = true
+	mysqlAutoCommit        = true
+	trojanTableName        = "users"
+	trojanDropTableQuery   = `DROP TABLE IF EXISTS ` + trojanTableName
+	trojanCreateTableQuery = `
+		CREATE TABLE ` + trojanTableName + ` (
+			id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+			username VARCHAR(64) NOT NULL,
+			password CHAR(56) NOT NULL,
+			quota BIGINT NOT NULL DEFAULT 0,
+			download BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			upload BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY (id),
+			INDEX (password)
+		);
+	`
 )
 
-func conn(sconf serverconf) (*sql.DB, error) {
+func conn(sconf mysqlConf) (*sql.DB, error) {
 	driverName := "mysql"
 	// dsn = fmt.Sprintf("user:password@tcp(localhost:5555)/dbname?tls=skip-verify&autocommit=true")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?loc=Local", sconf.mysqlUser, sconf.mysqlPasswd, sconf.mysqlHost, sconf.mysqlPort, sconf.mysqlDatabase)
@@ -72,4 +86,37 @@ func conn(sconf serverconf) (*sql.DB, error) {
 	return db, nil
 }
 
-func insert(tbl string) {}
+func initDB(sconf mysqlConf, hard bool) error {
+	db, err := conn(sconf)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if hard {
+		stmtCreateDrop, err := db.Prepare(trojanDropTableQuery)
+		if err != nil {
+			return err
+		}
+		defer stmtCreateDrop.Close()
+
+		_, err = stmtCreateDrop.Exec()
+		if err != nil {
+			return err
+		}
+	}
+
+	stmtCreateTbl, err := db.Prepare(trojanCreateTableQuery)
+	if err != nil {
+		return err
+	}
+	defer stmtCreateTbl.Close()
+
+	_, err = stmtCreateTbl.Exec()
+
+	return err
+}
+
+func insert(tbl string) {
+
+}
