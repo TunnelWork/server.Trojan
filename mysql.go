@@ -13,6 +13,12 @@ import (
 )
 
 const (
+	dbEngineInsertResultUnknown     = 0
+	dbEngineInsertResultSupported   = 1
+	dbEngineInsertResultUnsupported = 2
+)
+
+const (
 	mysqlAutoCommit        = true
 	trojanTableName        = "users"
 	trojanDropTableQuery   = `DROP TABLE IF EXISTS ` + trojanTableName
@@ -30,7 +36,16 @@ const (
 	`
 )
 
-func conn(sconf mysqlConf) (*sql.DB, error) {
+func dbIsConnected(db *sql.DB) (bool, error) {
+	err := db.Ping()
+	if err != nil {
+		db.Close()
+		return false, err
+	}
+	return true, nil
+}
+
+func connectDB(sconf mysqlConf) (*sql.DB, error) {
 	driverName := "mysql"
 	// dsn = fmt.Sprintf("user:password@tcp(localhost:5555)/dbname?tls=skip-verify&autocommit=true")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?loc=Local", sconf.mysqlUser, sconf.mysqlPasswd, sconf.mysqlHost, sconf.mysqlPort, sconf.mysqlDatabase)
@@ -77,9 +92,7 @@ func conn(sconf mysqlConf) (*sql.DB, error) {
 		return nil, err
 	}
 
-	err = db.Ping()
-	if err != nil {
-		db.Close()
+	if connected, err := dbIsConnected(db); !connected {
 		return nil, err
 	}
 
@@ -87,7 +100,7 @@ func conn(sconf mysqlConf) (*sql.DB, error) {
 }
 
 func initDB(sconf mysqlConf, hard bool) error {
-	db, err := conn(sconf)
+	db, err := connectDB(sconf)
 	if err != nil {
 		return err
 	}
@@ -117,6 +130,76 @@ func initDB(sconf mysqlConf, hard bool) error {
 	return err
 }
 
-func insert(tbl string) {
+func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, bypassLivenessCheck bool) (accid []int, err error) {
+	var dbEngineInsertResultSupport int8 = dbEngineInsertResultUnknown
+	accid = make([]int, 0)
 
+	// Caller must be checking liveness or handling potential errors if bypassing liveness check.
+	// Otherwise, check for liveness.
+	if !bypassLivenessCheck {
+		if connected, err := dbIsConnected(db); !connected {
+			return accid, err
+		}
+	}
+
+	stmtCheckUser, err := db.Prepare(`SELECT id FROM ` + trojanTableName + ` WHERE username = ? AND password = ?`)
+	if err != nil {
+		return accid, err
+	}
+	defer stmtCheckUser.Close()
+
+	stmtInsertUser, err := db.Prepare(`INSERT INTO ` + trojanTableName + ` (username, password, quota) VALUES( ?, ?, ? )`)
+	if err != nil {
+		return accid, err
+	}
+	defer stmtInsertUser.Close()
+
+	for _, aconf := range aconfs {
+		result, err := stmtInsertUser.Exec(aconf["username"], aconf["password"], aconf["quota"])
+		if err != nil {
+			return accid, err
+		} else {
+			var insertedId int
+			switch dbEngineInsertResultSupport {
+			case dbEngineInsertResultSupported:
+				// When this is the case, use LastInsertId() will suffice which saves time.
+				lastId, err := result.LastInsertId()
+				if err != nil {
+					return accid, err
+				}
+				accid = append(accid, int(lastId))
+			case dbEngineInsertResultUnsupported:
+				// Otherwise we need to execute the stmtCheckUser to get the ID
+				err = stmtCheckUser.QueryRow(aconf["username"], aconf["password"]).Scan(&insertedId)
+
+				if err != nil {
+					// Too bad, we can't query even the first one.
+					return accid, err
+				}
+
+				accid = append(accid, insertedId)
+			default:
+				// Check if it is supported?
+				lastId, err := result.LastInsertId()
+				if err != nil || lastId == 0 {
+					// Apparently, not supported
+					dbEngineInsertResultSupport = dbEngineInsertResultUnsupported
+
+					err = stmtCheckUser.QueryRow(aconf["username"], aconf["password"]).Scan(&insertedId)
+
+					if err != nil {
+						// Too bad, we can't query even the first one.
+						return accid, err
+					}
+
+					accid = append(accid, insertedId)
+				} else {
+					dbEngineInsertResultSupport = dbEngineInsertResultSupported
+					accid = append(accid, int(lastId))
+				}
+			}
+		}
+	}
+
+	return accid, nil
 }

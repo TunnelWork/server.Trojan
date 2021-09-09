@@ -93,7 +93,7 @@ func (s Server) UpdateServer(sconf UlyssesServer.ServerConfigurables) (err error
 func (s Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid []int, err error) {
 	accid = make([]int, 0)
 
-	db, err := conn(s.mysqlConf)
+	db, err := connectDB(s.mysqlConf)
 	if err != nil {
 		return accid, err
 	}
