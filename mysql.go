@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 
 	UlyssesServer "github.com/TunnelWork/Ulysses/src/server"
 	"github.com/go-sql-driver/mysql"
@@ -32,8 +33,7 @@ const (
 			upload BIGINT UNSIGNED NOT NULL DEFAULT 0,
 			PRIMARY KEY (id),
 			INDEX (password)
-		);
-	`
+		)`
 )
 
 func dbIsConnected(db *sql.DB) (bool, error) {
@@ -130,17 +130,21 @@ func initDB(sconf mysqlConf, hard bool) error {
 	return err
 }
 
-func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, bypassLivenessCheck bool) (accid []int, err error) {
+// newTrojanAccounts creates accounts according to aconfs passed in.
+// Callee must check for aconfs' validity.
+// Passing in bad aconfs will result in crashing/paniking.
+// func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, bypassLivenessCheck bool) (accid []int, err error) {
+func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) (accid []int, err error) {
 	var dbEngineInsertResultSupport int8 = dbEngineInsertResultUnknown
 	accid = make([]int, 0)
 
-	// Caller must be checking liveness or handling potential errors if bypassing liveness check.
-	// Otherwise, check for liveness.
-	if !bypassLivenessCheck {
-		if connected, err := dbIsConnected(db); !connected {
-			return accid, err
-		}
-	}
+	// // Caller must be checking liveness or handling potential errors if bypassing liveness check.
+	// // Otherwise, check for liveness.
+	// if !bypassLivenessCheck {
+	// 	if connected, err := dbIsConnected(db); !connected {
+	// 		return accid, err
+	// 	}
+	// }
 
 	stmtCheckUser, err := db.Prepare(`SELECT id FROM ` + trojanTableName + ` WHERE username = ? AND password = ?`)
 	if err != nil {
@@ -155,7 +159,11 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, 
 	defer stmtInsertUser.Close()
 
 	for _, aconf := range aconfs {
-		result, err := stmtInsertUser.Exec(aconf["username"], aconf["password"], aconf["quota"])
+		quota, err := strconv.ParseInt(aconf["quota"], 10, 64)
+		if err != nil {
+			return accid, err
+		}
+		result, err := stmtInsertUser.Exec(aconf["username"], aconf["password"], int(quota))
 		if err != nil {
 			return accid, err
 		} else {
@@ -202,4 +210,24 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, 
 	}
 
 	return accid, nil
+}
+
+func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []UlyssesServer.AccountConfigurables) (successAccID []int, err error) {
+	// TODO: Finish this function
+	return successAccID, err
+}
+
+func deleteTrojanAccounts(db *sql.DB, accID []int) (successAccID []int, err error) {
+	// TODO: Finish this function
+	return successAccID, err
+}
+
+func getCredentialTrojanAccounts(db *sql.DB, accID []int) (credentials []Credential, err error) {
+	// TODO: Finish this function
+	return credentials, err
+}
+
+func getUsageTrojanAccounts(db *sql.DB, accID []int) (usage []Usage, err error) {
+	// TODO: Finish this function
+	return usage, err
 }
