@@ -97,8 +97,10 @@ func (s Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid []
 	}
 	defer db.Close()
 
-	if isValidTrojanConf(aconf, ADD) {
-		accid, err = newTrojanAccounts(db, aconf)
+	if arrTrojanAccountConfigurables, err := parseTrojanAccountConfigurables(aconf, ADD); err != nil {
+		return accid, err
+	} else {
+		accid, err = newTrojanAccounts(db, arrTrojanAccountConfigurables)
 	}
 
 	return accid, err
@@ -114,6 +116,8 @@ func (s Server) UpdateAccount(accID []int, aconf []UlyssesServer.AccountConfigur
 	if isValidTrojanConf(aconf, UPDATE) {
 		// TODO: update mysql.go
 		successAccID, err = updateTrojanAccounts(db, accID, aconf)
+	} else {
+		err = ErrInvalidTrojanConfigurables
 	}
 
 	return successAccID, err

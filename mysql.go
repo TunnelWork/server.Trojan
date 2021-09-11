@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"strconv"
+	"strings"
 
 	UlyssesServer "github.com/TunnelWork/Ulysses/src/server"
 	"github.com/go-sql-driver/mysql"
@@ -134,9 +134,9 @@ func initDB(sconf mysqlConf, hard bool) error {
 // Callee must check for aconfs' validity.
 // Passing in bad aconfs will result in crashing/paniking.
 // func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables, bypassLivenessCheck bool) (accid []int, err error) {
-func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) (accid []int, err error) {
+func newTrojanAccounts(db *sql.DB, aconfs []*trojanAccountConfigurables) (accid []int, err error) {
 	var dbEngineInsertResultSupport int8 = dbEngineInsertResultUnknown
-	accid = make([]int, 0)
+	accid = []int{}
 
 	// // Caller must be checking liveness or handling potential errors if bypassing liveness check.
 	// // Otherwise, check for liveness.
@@ -159,11 +159,7 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) 
 	defer stmtInsertUser.Close()
 
 	for _, aconf := range aconfs {
-		quota, err := strconv.ParseInt(aconf["quota"], 10, 64)
-		if err != nil {
-			return accid, err
-		}
-		result, err := stmtInsertUser.Exec(aconf["username"], aconf["password"], int(quota))
+		result, err := stmtInsertUser.Exec(aconf.username, aconf.password, aconf.quota)
 		if err != nil {
 			return accid, err
 		} else {
@@ -178,7 +174,7 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) 
 				accid = append(accid, int(lastId))
 			case dbEngineInsertResultUnsupported:
 				// Otherwise we need to execute the stmtCheckUser to get the ID
-				err = stmtCheckUser.QueryRow(aconf["username"], aconf["password"]).Scan(&insertedId)
+				err = stmtCheckUser.QueryRow(aconf.username, aconf.password).Scan(&insertedId)
 
 				if err != nil {
 					// Too bad, we can't query even the first one.
@@ -193,7 +189,7 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) 
 					// Apparently, not supported
 					dbEngineInsertResultSupport = dbEngineInsertResultUnsupported
 
-					err = stmtCheckUser.QueryRow(aconf["username"], aconf["password"]).Scan(&insertedId)
+					err = stmtCheckUser.QueryRow(aconf.username, aconf.password).Scan(&insertedId)
 
 					if err != nil {
 						// Too bad, we can't query even the first one.
@@ -212,8 +208,108 @@ func newTrojanAccounts(db *sql.DB, aconfs []UlyssesServer.AccountConfigurables) 
 	return accid, nil
 }
 
-func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []UlyssesServer.AccountConfigurables) (successAccID []int, err error) {
-	// TODO: Finish this function
+// TODO: Finish this func
+func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []*trojanAccountConfigurables) (successAccID []int, err error) {
+	// Check the first aconf to see what keys are needed.
+	successAccID = []int{}
+	keysSlices := []string{}
+	questionMarkSlices := []string{}
+
+	if aconfs[0].username != nil {
+		keysSlices = append(keysSlices, "username")
+		questionMarkSlices = append(questionMarkSlices, "?")
+	}
+	if aconfs[0].password != nil {
+		keysSlices = append(keysSlices, "password")
+		questionMarkSlices = append(questionMarkSlices, "?")
+	}
+	if aconfs[0].quota != nil {
+		keysSlices = append(keysSlices, "quota")
+		questionMarkSlices = append(questionMarkSlices, "?")
+	}
+	if aconfs[0].download != nil {
+		keysSlices = append(keysSlices, "download")
+		questionMarkSlices = append(questionMarkSlices, "?")
+	}
+	if aconfs[0].upload != nil {
+		keysSlices = append(keysSlices, "upload")
+		questionMarkSlices = append(questionMarkSlices, "?")
+	}
+	keysListString := strings.Join(keysSlices[:], ", ")                 // "username, password, quota, download, upload"
+	questionMarkListString := strings.Join(questionMarkSlices[:], ", ") // "?, ?, ?, ?, ?"
+
+	stmtUpdateUser, err := db.Prepare(`UPDATE ` + trojanTableName + ` ( ` + keysListString + ` )` + `VALUES( ` + questionMarkListString + ` )`)
+	if err != nil {
+		return successAccID, err
+	}
+	defer stmtUpdateUser.Close()
+
+	for _, aconf := range aconfs {
+		// Construct interface{} list
+		var args []interface{}
+		if aconf.username != nil {
+			args = append(args, aconf.username)
+		}
+		if aconf.password != nil {
+			args = append(args, aconf.password)
+		}
+		if aconf.quota != nil {
+			args = append(args, aconf.quota)
+		}
+		if aconf.download != nil {
+			args = append(args, aconf.download)
+		}
+		if aconf.upload != nil {
+			args = append(args, aconf.upload)
+		}
+
+		_, err := stmtUpdateUser.Exec(args...)
+		if err != nil {
+			return successAccID, err
+		} else {
+			var insertedId int
+
+			switch dbEngineInsertResultSupport {
+			case dbEngineInsertResultSupported:
+				// When this is the case, use LastInsertId() will suffice which saves time.
+				lastId, err := result.LastInsertId()
+				if err != nil {
+					return accid, err
+				}
+				accid = append(accid, int(lastId))
+			case dbEngineInsertResultUnsupported:
+				// Otherwise we need to execute the stmtCheckUser to get the ID
+				err = stmtCheckUser.QueryRow(aconf.username, aconf.password).Scan(&insertedId)
+
+				if err != nil {
+					// Too bad, we can't query even the first one.
+					return accid, err
+				}
+
+				accid = append(accid, insertedId)
+			default:
+				// Check if it is supported?
+				lastId, err := result.LastInsertId()
+				if err != nil || lastId == 0 {
+					// Apparently, not supported
+					dbEngineInsertResultSupport = dbEngineInsertResultUnsupported
+
+					err = stmtCheckUser.QueryRow(aconf.username, aconf.password).Scan(&insertedId)
+
+					if err != nil {
+						// Too bad, we can't query even the first one.
+						return accid, err
+					}
+
+					accid = append(accid, insertedId)
+				} else {
+					dbEngineInsertResultSupport = dbEngineInsertResultSupported
+					accid = append(accid, int(lastId))
+				}
+			}
+		}
+	}
+
 	return successAccID, err
 }
 

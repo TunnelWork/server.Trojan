@@ -92,45 +92,105 @@ const (
 	UPDATE
 )
 
-func isValidTrojanConf(aconfs []UlyssesServer.AccountConfigurables, op serverOperator) bool {
+type trojanAccountConfigurables struct {
+	username interface{}
+	password interface{}
+	quota    interface{}
+	download interface{}
+	upload   interface{}
+}
+
+func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables, op serverOperator) ([]*trojanAccountConfigurables, error) {
+	var newArrTrojanAccountConfigurables = []*trojanAccountConfigurables{}
 	if op == ADD {
 		// To add new accounts, each AccountConfigurables must set username, password, quota.
 		//
 		for _, aconf := range aconfs {
-			if _, ok := aconf["username"]; !ok {
-				return false
+			var newTrojanAccountConfigurables = trojanAccountConfigurables{}
+
+			if username, ok := aconf["username"]; !ok {
+				return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+			} else {
+				newTrojanAccountConfigurables.username = username
 			}
-			if _, ok := aconf["password"]; !ok {
-				return false
+			if password, ok := aconf["password"]; !ok {
+				return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+			} else {
+				newTrojanAccountConfigurables.password = password
 			}
-			if _, ok := aconf["quota"]; !ok {
-				return false
+			if quota, ok := aconf["quota"]; !ok {
+				return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+			} else {
+				// quota needs to be converted from string to int
+				quota64, err := strconv.ParseInt(quota, 10, 64)
+				if err != nil {
+					return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+				}
+				parsedQuota := int(quota64)
+				newTrojanAccountConfigurables.quota = parsedQuota
 			}
+
+			newArrTrojanAccountConfigurables = append(newArrTrojanAccountConfigurables, &newTrojanAccountConfigurables)
 		}
 	}
 	if op == UPDATE {
 		// To run a batch update, make sure:
 		// - every AccountConfigurables include all keys in the first AccountConfigurables.
-		// - no unrecognized keys (i'm lazy)
+		// - [IGNORE THIS] no unrecognized keys (i'm lazy)
 		keysFromFirst := make([]string, 0)
 
 		for key, _ := range aconfs[0] {
 			switch key {
 			case "username", "password", "quota", "download", "upload": // All recognized keys
 				keysFromFirst = append(keysFromFirst, key)
-			default:
-				return false // unrecognized key
+				// default: // Ignore any key that can't be recognized
+				// 	return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
 			}
 		}
 
-		for _, aconf := range aconfs[1:] {
+		for _, aconf := range aconfs {
+			var newTrojanAccountConfigurables = trojanAccountConfigurables{}
+
 			// Now loop through to check all keys
 			for _, key := range keysFromFirst {
-				if _, ok := aconf[key]; !ok {
-					return false
+				if val, ok := aconf[key]; !ok {
+					// If an AccountConfigurables doesn't contain all VALID keys from the first one, fail.
+					return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+				} else {
+					switch key {
+					case "username":
+						newTrojanAccountConfigurables.username = val
+					case "password":
+						newTrojanAccountConfigurables.password = val
+					case "quota":
+						// quota needs to be converted from string to int
+						quota64, err := strconv.ParseInt(val, 10, 64)
+						if err != nil {
+							return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+						}
+						parsedQuota := int(quota64)
+						newTrojanAccountConfigurables.quota = parsedQuota
+					case "download":
+						// download needs to be converted from string to uint
+						download64, err := strconv.ParseUint(val, 10, 64)
+						if err != nil {
+							return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+						}
+						parsedDownload := uint(download64)
+						newTrojanAccountConfigurables.download = parsedDownload
+					case "upload":
+						// upload needs to be converted from string to uint
+						upload64, err := strconv.ParseUint(val, 10, 64)
+						if err != nil {
+							return []*trojanAccountConfigurables{}, ErrInvalidTrojanConfigurables
+						}
+						parsedUpload := uint(upload64)
+						newTrojanAccountConfigurables.upload = parsedUpload
+					}
+					newArrTrojanAccountConfigurables = append(newArrTrojanAccountConfigurables, &newTrojanAccountConfigurables)
 				}
 			}
 		}
 	}
-	return true
+	return newArrTrojanAccountConfigurables, nil
 }
