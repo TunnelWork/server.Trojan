@@ -91,6 +91,7 @@ func (s Server) UpdateServer(sconf UlyssesServer.ServerConfigurables) (err error
 // AddAccount add a set of new Trojan users into the database specified by s.mysqlConf
 // and return the added user IDs
 func (s Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid []int, err error) {
+	accid = []int{}
 	db, err := connectDB(s.mysqlConf)
 	if err != nil {
 		return accid, err
@@ -101,23 +102,29 @@ func (s Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid []
 		return accid, err
 	} else {
 		accid, err = newTrojanAccounts(db, arrTrojanAccountConfigurables)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return accid, err
 }
 
 func (s Server) UpdateAccount(accID []int, aconf []UlyssesServer.AccountConfigurables) (successAccID []int, err error) {
+	successAccID = []int{}
 	db, err := connectDB(s.mysqlConf)
 	if err != nil {
 		return successAccID, err
 	}
 	defer db.Close()
 
-	if isValidTrojanConf(aconf, UPDATE) {
-		// TODO: update mysql.go
-		successAccID, err = updateTrojanAccounts(db, accID, aconf)
+	if arrTrojanAccountConfigurables, err := parseTrojanAccountConfigurables(aconf, UPDATE); err != nil {
+		return successAccID, err
 	} else {
-		err = ErrInvalidTrojanConfigurables
+		successAccID, err = updateTrojanAccounts(db, accID, arrTrojanAccountConfigurables)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return successAccID, err
