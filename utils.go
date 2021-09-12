@@ -140,7 +140,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 		keysFromFirst := make([]string, 0)
 
 		keycnt := 0
-		for key, _ := range aconfs[0] {
+		for key := range aconfs[0] {
 			switch key {
 			case "username", "password", "quota", "download", "upload": // All recognized keys
 				keysFromFirst = append(keysFromFirst, key)

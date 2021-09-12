@@ -208,7 +208,6 @@ func newTrojanAccounts(db *sql.DB, aconfs []*trojanAccountConfigurables) (accid 
 	return accid, nil
 }
 
-// TODO: Finish this func
 func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []*trojanAccountConfigurables) (successAccID []int, err error) {
 	// Check the first aconf to see what keys are needed.
 	successAccID = []int{}
