@@ -1,4 +1,4 @@
-package trojan
+package ulyssestrojan
 
 import (
 	"strconv"
@@ -109,22 +109,22 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 			var newTrojanAccountConfigurables = trojanAccountConfigurables{}
 
 			if username, ok := aconf["username"]; !ok {
-				return nil, ErrInvalidTrojanConfigurables
+				return nil, UlyssesServer.ErrAccountConfigurables
 			} else {
 				newTrojanAccountConfigurables.username = username
 			}
 			if password, ok := aconf["password"]; !ok {
-				return nil, ErrInvalidTrojanConfigurables
+				return nil, UlyssesServer.ErrAccountConfigurables
 			} else {
 				newTrojanAccountConfigurables.password = password
 			}
 			if quota, ok := aconf["quota"]; !ok {
-				return nil, ErrInvalidTrojanConfigurables
+				return nil, UlyssesServer.ErrAccountConfigurables
 			} else {
 				// quota needs to be converted from string to int
 				quota64, err := strconv.ParseInt(quota, 10, 64)
 				if err != nil {
-					return nil, ErrInvalidTrojanConfigurables
+					return nil, UlyssesServer.ErrAccountConfigurables
 				}
 				parsedQuota := int(quota64)
 				newTrojanAccountConfigurables.quota = parsedQuota
@@ -151,7 +151,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 		}
 
 		if keycnt == 0 {
-			return nil, ErrInvalidTrojanConfigurables // Reject empty updates
+			return nil, UlyssesServer.ErrAccountConfigurables // Reject empty updates
 		}
 
 		for _, aconf := range aconfs {
@@ -161,7 +161,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 			for _, key := range keysFromFirst {
 				if val, ok := aconf[key]; !ok {
 					// If an AccountConfigurables doesn't contain all VALID keys from the first one, fail.
-					return nil, ErrInvalidTrojanConfigurables
+					return nil, UlyssesServer.ErrAccountConfigurables
 				} else {
 					switch key {
 					case "username":
@@ -172,7 +172,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 						// quota needs to be converted from string to int
 						quota64, err := strconv.ParseInt(val, 10, 64)
 						if err != nil {
-							return nil, ErrInvalidTrojanConfigurables
+							return nil, UlyssesServer.ErrAccountConfigurables
 						}
 						parsedQuota := int(quota64)
 						newTrojanAccountConfigurables.quota = parsedQuota
@@ -180,7 +180,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 						// download needs to be converted from string to uint
 						download64, err := strconv.ParseUint(val, 10, 64)
 						if err != nil {
-							return nil, ErrInvalidTrojanConfigurables
+							return nil, UlyssesServer.ErrAccountConfigurables
 						}
 						parsedDownload := uint(download64)
 						newTrojanAccountConfigurables.download = parsedDownload
@@ -188,7 +188,7 @@ func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables
 						// upload needs to be converted from string to uint
 						upload64, err := strconv.ParseUint(val, 10, 64)
 						if err != nil {
-							return nil, ErrInvalidTrojanConfigurables
+							return nil, UlyssesServer.ErrAccountConfigurables
 						}
 						parsedUpload := uint(upload64)
 						newTrojanAccountConfigurables.upload = parsedUpload
