@@ -1,4 +1,4 @@
-package trojan
+package ulyssestrojan
 
 import (
 	"crypto/tls"
@@ -261,23 +261,72 @@ func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []*trojanAccountConfig
 		if err != nil {
 			return successAccID, err
 		} else {
-			successAccID = append(successAccID, idx)
+			successAccID = append(successAccID, accID[idx])
 		}
 	}
 	return successAccID, err
 }
 
 func deleteTrojanAccounts(db *sql.DB, accID []int) (successAccID []int, err error) {
-	// TODO: Finish this function
+	successAccID = []int{}
+	stmtDeleteUser, err := db.Prepare(`DELETE FROM` + trojanTableName + ` WHERE id = ?`)
+	if err != nil {
+		return successAccID, err
+	}
+	defer stmtDeleteUser.Close()
+
+	for _, id := range accID {
+		_, err := stmtDeleteUser.Exec(id)
+		if err != nil {
+			return successAccID, err
+		} else {
+			successAccID = append(successAccID, id)
+		}
+	}
+
 	return successAccID, err
 }
 
-func getCredentialTrojanAccounts(db *sql.DB, accID []int) (credentials []Credential, err error) {
-	// TODO: Finish this function
-	return credentials, err
+func getCredentialTrojanAccounts(db *sql.DB, accID []int) (credentials []UlyssesServer.Credential, err error) {
+	credentials = []UlyssesServer.Credential{}
+
+	stmtGetCredential, err := db.Prepare(`SELECT id, username, password AS PasswdSHA224 FROM ` + trojanTableName + ` WHERE id = ?`)
+	if err != nil {
+		return credentials, err
+	}
+	defer stmtGetCredential.Close()
+
+	for _, id := range accID {
+		newCredential := Credential{}
+		err := stmtGetCredential.QueryRow(id).Scan(&newCredential)
+		if err != nil {
+			return credentials, err
+		} else {
+			credentials = append(credentials, newCredential)
+		}
+	}
+
+	return credentials, nil
 }
 
-func getUsageTrojanAccounts(db *sql.DB, accID []int) (usage []Usage, err error) {
-	// TODO: Finish this function
+func getUsageTrojanAccounts(db *sql.DB, accID []int) (usage []UlyssesServer.AccountUsage, err error) {
+	usage = []UlyssesServer.AccountUsage{}
+
+	stmtGetUsage, err := db.Prepare(`SELECT quota, download, upload FROM ` + trojanTableName + ` WHERE id = ?`)
+	if err != nil {
+		return usage, err
+	}
+	defer stmtGetUsage.Close()
+
+	for _, id := range accID {
+		newUsage := AccountUsage{}
+		err := stmtGetUsage.QueryRow(id).Scan(&newUsage)
+		if err != nil {
+			return usage, err
+		} else {
+			usage = append(usage, newUsage)
+		}
+	}
+
 	return usage, err
 }
