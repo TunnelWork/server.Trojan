@@ -11,7 +11,7 @@ type ServerRegistrar struct {
 
 // NewServer creates a new Server struct by saving ServerConfigurables into Server struct
 // then initialize a new RWMutex.
-func (sr *ServerRegistrar) NewServer(sconf UlyssesServer.ServerConfigurables) (UlyssesServer.Server, error) {
+func (sr *ServerRegistrar) NewServer(sconf UlyssesServer.Configurables) (UlyssesServer.Server, error) {
 	mysqlConf, err := parseServerConf(sconf)
 	if err != nil {
 		return &Server{}, err

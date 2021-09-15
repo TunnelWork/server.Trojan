@@ -21,7 +21,7 @@ type mysqlConf struct {
 	mysqlCertPath string
 }
 
-func parseServerConf(sconf UlyssesServer.ServerConfigurables) (mysqlConf, error) {
+func parseServerConf(sconf UlyssesServer.Configurables) (mysqlConf, error) {
 	servconf := mysqlConf{}
 
 	mysqlHost, ok := sconf["mysqlHost"]
@@ -100,7 +100,7 @@ type trojanAccountConfigurables struct {
 	upload   interface{}
 }
 
-func parseTrojanAccountConfigurables(aconfs []UlyssesServer.AccountConfigurables, op serverOperator) ([]*trojanAccountConfigurables, error) {
+func parseTrojanAccountConfigurables(aconfs []UlyssesServer.Configurables, op serverOperator) ([]*trojanAccountConfigurables, error) {
 	var newArrTrojanAccountConfigurables = []*trojanAccountConfigurables{}
 	if op == ADD {
 		// To add new accounts, each AccountConfigurables must set username, password, quota.

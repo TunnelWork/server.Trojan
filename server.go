@@ -17,7 +17,7 @@ type Server struct {
 
 // UpdateServer update the saved ServerConfigurables for a Server
 // this implemenetation will be useful for memory-persistent implementation
-func (s *Server) UpdateServer(sconf UlyssesServer.ServerConfigurables) (err error) {
+func (s *Server) UpdateServer(sconf UlyssesServer.Configurables) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -32,7 +32,7 @@ func (s *Server) UpdateServer(sconf UlyssesServer.ServerConfigurables) (err erro
 
 // AddAccount add a set of new Trojan users into the database specified by s.mysqlConf
 // and return the added user IDs
-func (s *Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid []int, err error) {
+func (s *Server) AddAccount(aconf []UlyssesServer.Configurables) (accid []int, err error) {
 	accid = []int{}
 	db, err := connectDB(s.mysqlConf)
 	if err != nil {
@@ -52,7 +52,7 @@ func (s *Server) AddAccount(aconf []UlyssesServer.AccountConfigurables) (accid [
 	return accid, err
 }
 
-func (s *Server) UpdateAccount(accID []int, aconf []UlyssesServer.AccountConfigurables) (successAccID []int, err error) {
+func (s *Server) UpdateAccount(accID []int, aconf []UlyssesServer.Configurables) (successAccID []int, err error) {
 	successAccID = []int{}
 	db, err := connectDB(s.mysqlConf)
 	if err != nil {

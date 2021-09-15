@@ -1,0 +1,4 @@
+github.com/TunnelWork/Ulysses v0.0.2-0.20210915044013-1a19fc02d71e h1:Ewyi2A4v5HksLI80rA4SXLIof75VFmVMLJuxPQIuZK4=
+github.com/TunnelWork/Ulysses v0.0.2-0.20210915044013-1a19fc02d71e/go.mod h1:qFlbIATIXPSQLnq3ugZxXW8QgV3Ay/ElDU6G+qxnnJc=
+github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
+github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
