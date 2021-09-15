@@ -13,7 +13,7 @@ type Credential struct {
 }
 
 // ForClient() is not useful for trojan protocol, given that password stored on DB server is hashed.
-func (c Credential) ForClient() (credential string) {
+func (c Credential) ForClient() (credential string) { // skipcq: RVV-B0013
 	return ""
 }
 

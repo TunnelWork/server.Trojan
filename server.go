@@ -111,7 +111,17 @@ func (s *Server) GetUsage(accID []int) (usages []UlyssesServer.AccountUsage, err
 
 // InitDB is a wrapper for initDB() which initializes a database(scheme) for
 // Trojan by creating a table under the name `user`.
-// When hard == true, it will overwrite the existing table with name `user`
-func InitDB(sconf mysqlConf, hard bool) error {
-	return initDB(sconf, hard)
+func InitDB(sconf mysqlConf) error {
+	return initDB(sconf)
+}
+
+// HardInitDB is a wrapper for initDB() which initializes a database(scheme) for
+// Trojan by creating a table under the name `user`.
+// It will overwrite the `user` table if it exist.
+func HardInitDB(sconf mysqlConf) error {
+	err := clearDB(sconf)
+	if err != nil {
+		return err
+	}
+	return initDB(sconf)
 }

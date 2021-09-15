@@ -74,12 +74,16 @@ func connectDB(sconf mysqlConf) (*sql.DB, error) {
 				// ServerName: "example.com",
 				RootCAs:      rootCertPool,
 				Certificates: clientCert,
+				MinVersion:   tls.VersionTLS12,
+				MaxVersion:   0,
 			})
 		} else if sconf.mysqlKeyPath == "" && sconf.mysqlCertPath == "" {
 			// Neither Key or Cert is set. Proceed without customer cert.
 			mysql.RegisterTLSConfig("custom", &tls.Config{
 				// ServerName: "example.com",
-				RootCAs: rootCertPool,
+				RootCAs:    rootCertPool,
+				MinVersion: tls.VersionTLS12,
+				MaxVersion: 0,
 			})
 		} else {
 			// one of Key or Cert is set but not both, which is ILLEGAL.
@@ -99,25 +103,29 @@ func connectDB(sconf mysqlConf) (*sql.DB, error) {
 	return db, nil
 }
 
-func initDB(sconf mysqlConf, hard bool) error {
+func clearDB(sconf mysqlConf) error {
 	db, err := connectDB(sconf)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	if hard {
-		stmtCreateDrop, err := db.Prepare(trojanDropTableQuery)
-		if err != nil {
-			return err
-		}
-		defer stmtCreateDrop.Close()
-
-		_, err = stmtCreateDrop.Exec()
-		if err != nil {
-			return err
-		}
+	stmtCreateDrop, err := db.Prepare(trojanDropTableQuery)
+	if err != nil {
+		return err
 	}
+	defer stmtCreateDrop.Close()
+
+	_, err = stmtCreateDrop.Exec()
+	return err
+}
+
+func initDB(sconf mysqlConf) error {
+	db, err := connectDB(sconf)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
 
 	stmtCreateTbl, err := db.Prepare(trojanCreateTableQuery)
 	if err != nil {
@@ -228,7 +236,7 @@ func updateTrojanAccounts(db *sql.DB, accID []int, aconfs []*trojanAccountConfig
 	if aconfs[0].upload != nil {
 		updatesSlices = append(updatesSlices, "upload = ?")
 	}
-	updateListString := strings.Join(updatesSlices[:], " , ") // "?, ?, ?, ?, ?"
+	updateListString := strings.Join(updatesSlices, " , ") // "?, ?, ?, ?, ?"
 
 	stmtUpdateUser, err := db.Prepare(`UPDATE ` + trojanTableName + ` SET ` + updateListString + ` WHERE id = ?`)
 	if err != nil {
