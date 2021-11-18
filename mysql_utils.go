@@ -85,10 +85,11 @@ func mysqlCreateTableIfNotExists(db *sql.DB) error {
         upload BIGINT UNSIGNED NOT NULL DEFAULT 0,
         product_serial_number BIGINT UNSIGNED NOT NULL,
         password_encrypted VARCHAR() NOT NULL,
+		last_refresh DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY (password),
-		INDEX (product_serial_number)
-    );`)
+        INDEX (product_serial_number)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;`)
 	if err != nil {
 		return err
 	}
@@ -104,8 +105,9 @@ func createAccount(db *sql.DB, productSN uint64, conf AccountConfiguration) erro
         password, 
         quota,
         product_serial_number, 
-        password_encrypted
-    ) VALUES (?, ?, ?, ?)`)
+        password_encrypted,
+		last_refresh
+    ) VALUES (?, ?, ?, ?, NOW())`)
 	if err != nil {
 		return err
 	}
@@ -122,7 +124,7 @@ func createAccount(db *sql.DB, productSN uint64, conf AccountConfiguration) erro
 }
 
 func getAccount(db *sql.DB, productSN uint64) (*Account, error) {
-	stmtGetAccount, err := db.Prepare(`SELECT password, quota, download + upload, product_serial_number, password_encrypted FROM users WHERE product_serial_number = ?`)
+	stmtGetAccount, err := db.Prepare(`SELECT password, quota, download + upload, product_serial_number, password_encrypted, last_refresh FROM users WHERE product_serial_number = ?`)
 	if err != nil {
 		return nil, err
 	}
@@ -131,18 +133,39 @@ func getAccount(db *sql.DB, productSN uint64) (*Account, error) {
 	var account Account = Account{
 		credentials: &Credentials{},
 		resources: []*server.Resource{
-			{},
+			{
+				ResourceID: server.RESOURCE_DATA_TRANSFER,
+			},
+			{
+				ResourceID: server.RESOURCE_SERVICE_HOUR,
+			},
 		},
 	}
+	var trafficBytesAllocated int64
+	var trafficBytesUsed uint64
+
 	err = stmtGetAccount.QueryRow(productSN).Scan(
 		&account.credentials.passwordSHA224,
 		// resourceID needs to be set
-		&account.resources[0].Allocated,
-		&account.resources[0].Used,
+		&trafficBytesAllocated,
+		&trafficBytesUsed,
 		// Don't forget compute Free
 		&account.credentials.productSN,
 		&account.credentials.passwordDecrypted, // Still needs to be decrypted
+		&account.credentials.timeLastRefresh,
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert bytes to GB
+	if trafficBytesAllocated > 0 {
+		account.resources[0].Allocated = float64(trafficBytesAllocated/1024/1024) / 1024
+	} else {
+		account.resources[0].Allocated = -1
+	}
+	account.resources[0].Used = float64(trafficBytesUsed/1024/1024) / 1024
 
 	return &account, err
 }
@@ -244,7 +267,8 @@ func unmaskPasswdAccount(db *sql.DB, productSN uint64) error {
 func refreshDownloadUploadAccount(db *sql.DB, productSN uint64) error {
 	stmtRefreshAccount, err := db.Prepare(`UPDATE users SET
         download = 0,
-        upload = 0
+        upload = 0,
+		last_refresh = NOW()
     WHERE product_serial_number = ?`)
 	if err != nil {
 		return err

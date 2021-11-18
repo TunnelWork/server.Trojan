@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/TunnelWork/Ulysses.Lib/security"
 	"github.com/TunnelWork/Ulysses.Lib/server"
@@ -28,8 +29,9 @@ type Credentials struct {
 	productSN         uint64
 	passwordSHA224    string
 	passwordDecrypted string
+	timeLastRefresh   time.Time
 	remoteAddr        string // inherited from ServerInfo.ServerAddress
-	remotePort        uint64 // inherited from ServerInfo.ServerPort (default 443?)
+	remotePort        uint16 // inherited from ServerInfo.ServerPort (default 443?)
 }
 
 func (c *Credentials) Customer() (credentials []*server.Credential) {
@@ -45,6 +47,10 @@ func (c *Credentials) Customer() (credentials []*server.Credential) {
 		{
 			CredentialName:  "password_decrypted",
 			CredentialValue: c.passwordDecrypted,
+		},
+		{
+			CredentialName:  "time_last_refresh",
+			CredentialValue: c.timeLastRefresh.Format("2006-01-02"),
 		},
 		{
 			CredentialName:  "remote_addr",
@@ -74,6 +80,10 @@ func (c *Credentials) Admin() (credentials []*server.Credential) {
 		{
 			CredentialName:  "password_SHA224",
 			CredentialValue: c.passwordSHA224,
+		},
+		{
+			CredentialName:  "time_last_refresh",
+			CredentialValue: c.timeLastRefresh.Format("2006-01-02"),
 		},
 		{
 			CredentialName:  "remote_addr",

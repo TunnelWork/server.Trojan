@@ -2,7 +2,9 @@ package utrojan
 
 import (
 	"database/sql"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/TunnelWork/Ulysses.Lib/security"
 	"github.com/TunnelWork/Ulysses.Lib/server"
@@ -63,14 +65,27 @@ func (p *ProvisioningServer) GetAccount(productSN uint64) (server.Account, error
 	}
 
 	// Complete filling resource details
-	account.resources[0].ResourceID = server.RESOURCE_DATA_TRANSFER
-	account.resources[0].Free = -1
-	if account.resources[0].Allocated > 0 {
-		account.resources[0].Free = account.resources[0].Allocated - account.resources[0].Used
+	// DATA_TRANSFER
+	if account.resources[0].ResourceID == server.RESOURCE_DATA_TRANSFER {
+		account.resources[0].Free = -1
+		if account.resources[0].Allocated > 0 {
+			account.resources[0].Free = account.resources[0].Allocated - account.resources[0].Used
+		}
+	}
+	// SERVICE_HOUR
+	if account.resources[1].ResourceID == server.RESOURCE_SERVICE_HOUR {
+		account.resources[1].Allocated = -1
+		account.resources[1].Free = -1
+		timeUsed := time.Since(account.credentials.timeLastRefresh)
+		account.resources[1].Used = math.Ceil(timeUsed.Hours()) // round to full hours
 	}
 
 	// Complete password decryption
 	account.credentials.passwordDecrypted = security.DecryptPassword(account.credentials.passwordDecrypted)
+
+	// Copy server info
+	account.credentials.remoteAddr = p.config.Info.ServerAddress
+	account.credentials.remotePort = p.config.Info.ServerPort
 
 	return account, nil
 }
