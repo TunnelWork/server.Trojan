@@ -1,4 +1,4 @@
-module github.com/TunnelWork/Ulysses.Trojan
+module github.com/TunnelWork/server.Trojan
 
 go 1.17
 
