@@ -30,18 +30,20 @@ func NewProvisioningServer( /*_ *sql.DB, */ instanceID string, serverConfigurati
 	}
 
 	var p ProvisioningServer = ProvisioningServer{
-		lock:   sync.RWMutex{},
-		config: psc,
-		db:     db,
+		instanceID: instanceID,
+		lock:       sync.RWMutex{},
+		config:     psc,
+		db:         db,
 	}
 
 	return &p, nil
 }
 
 type ProvisioningServer struct {
-	lock   sync.RWMutex
-	config ProvisioningServerConfig
-	db     *sql.DB
+	instanceID string
+	lock       sync.RWMutex
+	config     ProvisioningServerConfig
+	db         *sql.DB
 }
 
 // TODO: implement after upstream (Ulysses.Lib/Server) is confirmed
@@ -86,6 +88,7 @@ func (p *ProvisioningServer) GetAccount(productSN uint64) (server.Account, error
 	// Copy server info
 	account.credentials.remoteAddr = p.config.Info.ServerAddress
 	account.credentials.remotePort = p.config.Info.ServerPort
+	account.credentials.serverInstanceID = p.instanceID
 
 	return account, nil
 }

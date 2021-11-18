@@ -22,10 +22,11 @@ func (a *Account) Credentials() (server.Credentials, error) {
 }
 
 func (a *Account) Resources() ([]*server.Resource, error) {
-	return []*server.Resource{}, nil
+	return a.resources, nil
 }
 
 type Credentials struct {
+	serverInstanceID  string
 	productSN         uint64
 	passwordSHA224    string
 	passwordDecrypted string
@@ -39,6 +40,10 @@ func (c *Credentials) Customer() (credentials []*server.Credential) {
 		{
 			CredentialName:  "account_type",
 			CredentialValue: "trojan",
+		},
+		{
+			CredentialName:  "server_instance_id",
+			CredentialValue: c.serverInstanceID,
 		},
 		{
 			CredentialName:  "product_serial_number",
@@ -72,6 +77,10 @@ func (c *Credentials) Admin() (credentials []*server.Credential) {
 		{
 			CredentialName:  "account_type",
 			CredentialValue: "trojan",
+		},
+		{
+			CredentialName:  "server_instance_id",
+			CredentialValue: c.serverInstanceID,
 		},
 		{
 			CredentialName:  "product_serial_number",
